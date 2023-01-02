@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict,Tuple
 from torch import Tensor
 
 from torch.utils.data import Dataset,DataLoader
@@ -15,11 +15,37 @@ from promptsource.templates import DatasetTemplates
 class PGDataset(Dataset):
     def __init__(self,dataset_config:DictConfig):
         self.dataset_config = dataset_config
+        self.max_length = dataset_config.max_length
+        self.max_gen_length = dataset_config.max_gen_length
+
         self.tokenizer = AutoTokenizer.from_pretrained(self.dataset_config.tokenizer,trust_remote_code=True)
         self.dataset = load_dataset(dataset_config.dataset,split=dataset_config.split)
         self.prompter = self.build_prompter()
+        self.answer_prompt = dataset_config.answer_prompt
+        self.adapter = self.build_adapter()
 
 
+    
+    def build_adapter(self):
+        adapter_name = self.dataset_config.tokenizer
+        if "glm" in adapter_name:
+            adapter = self.glm_adapter
+        elif "t5" in adapter_name:
+            adapter = self.t5_adapter
+        elif "bart" in adapter_name:
+            adapter = self.bart_adapter
+        else:
+            raise NotImplementedError(f"Adapter {adapter_name} is not supported")
+        return adapter
+        
+    def glm_adapter(self,prompted_data:Tuple[str,str])->Dict[str,Tensor]:
+        prompt,answer = prompted_data
+        # add mask token
+        prompt += "[MASK]"
+        # tokenize
+        res = self.tokenizer(prompt,padding='max_length',max_length=self.max_length,return_tensors="pt")
+        res = self.tokenizer.build_inputs_for_generation(res,targets=answer,max_gen_length=self.max_gen_length)
+        return res
 
     def build_prompter(self):
         all_prompts = DatasetTemplates(self.dataset_config.dataset)
@@ -32,8 +58,11 @@ class PGDataset(Dataset):
         return len(self.dataset)
     def __getitem__(self, index:int)->Dict[str,Tensor]:
         # TODO: format the data using prompt, add mask token based on model, padding based on max_lenght, then pass the tokenizer
-
-        return self.dataset[index]
+        data = self.dataset[index]
+        prompted_data = self.prompter.apply(data)
+        prompted_data[0] = prompted_data[0] + "\n\n" + self.answer_prompt
+        res = self.adapter(prompted_data)
+        return res
 
 
 
