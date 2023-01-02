@@ -13,13 +13,16 @@ from datasets import load_dataset
 from promptsource.templates import DatasetTemplates
 
 class PGDataset(Dataset):
-    def __init__(self,dataset_config:DictConfig):
+    def __init__(self,dataset_config:DictConfig,split:str):
+        """
+        split = "train" or "validation" or "test"
+        """
         self.dataset_config = dataset_config
         self.max_length = dataset_config.max_length
         self.max_gen_length = dataset_config.max_gen_length
 
         self.tokenizer = AutoTokenizer.from_pretrained(self.dataset_config.tokenizer,trust_remote_code=True)
-        self.dataset = load_dataset(dataset_config.dataset,split=dataset_config.split)
+        self.dataset = load_dataset(dataset_config.dataset,split=split)
         self.prompter = self.build_prompter()
         self.answer_prompt = dataset_config.answer_prompt
         self.adapter = self.build_adapter()
