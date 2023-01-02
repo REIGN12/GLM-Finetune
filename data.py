@@ -17,6 +17,8 @@ class PGDataset(Dataset):
         self.dataset_config = dataset_config
         self.tokenizer = self.build_tokenizer()
         self.dataset = load_dataset(dataset_config.dataset,split=dataset_config.split)
+        self.prompter = self.build_prompter()
+
 
     def build_tokenizer(self):
         tokenizer_name = self.dataset_config.tokenizer
@@ -29,6 +31,13 @@ class PGDataset(Dataset):
         else:
             raise NotImplementedError(f"Tokenizer {tokenizer_name} is not supported")
         return tokenizer
+
+    def build_prompter(self):
+        all_prompts = DatasetTemplates(self.dataset_config.dataset)
+        # filter out those not original_task
+        prompt_key = [name for name in all_prompts.all_template_names if all_prompts[name].metadata.original_task ]
+        prompter = all_prompts[prompt_key[self.dataset_config.prompt_id]]
+        return prompter
 
     def __len__(self)->int:
         return len(self.dataset)
