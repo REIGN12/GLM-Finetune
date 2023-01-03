@@ -13,19 +13,29 @@ from datasets import load_dataset
 from promptsource.templates import DatasetTemplates
 
 class PGDataCollator:
-    def __init__(self,datacollator_config: DictConfig):
+    def __init__(self,datacollator_config: DictConfig,split:str):
         self.datacollator_config = datacollator_config
+        self.split = split
         self.tokenizer = AutoTokenizer.from_pretrained(self.datacollator_config.tokenizer,trust_remote_code=True)
         self.collator = self.build_collator()
     def build_collator(self):
         if "glm" in self.datacollator_config.tokenizer:
-            return self.glm_collator
+            if self.split == "train":
+                return self.glm_train_collator
+            else:
+                return self.glm_test_collator
         else:
             raise NotImplementedError("Not implemented yet")
-    def glm_collator(self,batch: List[Tuple[str,str]]) -> Dict[str,Tensor]:
+    def glm_train_collator(self,batch: List[Tuple[str,str]]) -> Dict[str,Tensor]:
         prompts,answers = [list(item) for item in zip(*batch)]
         res = self.tokenizer(prompts,padding=True,truncation=True,max_length=self.datacollator_config.max_length,return_tensors="pt")
         res = self.tokenizer.build_inputs_for_generation(res,targets=answers,max_gen_length=self.datacollator_config.max_gen_length)
+        return res
+    def glm_test_collator(self,batch: List[Tuple[str,str]]) -> Dict[str,Tensor]:
+        prompts,answers = [list(item) for item in zip(*batch)]
+        res = self.tokenizer(prompts,padding=True,truncation=True,max_length=self.datacollator_config.max_length,return_tensors="pt")
+        res = self.tokenizer.build_inputs_for_generation(res,max_gen_length=self.datacollator_config.max_gen_length)
+        res['labels'] = answers
         return res
 
     def __call__(self, batch: List[Tuple[str,str]]) -> Dict[str, Tensor]:
