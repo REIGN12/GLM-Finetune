@@ -1,0 +1,41 @@
+defaults:
+  - _self_
+  - override hydra/hydra_logging: disabled
+  - override hydra/job_logging: disabled
+
+hydra:
+  output_subdir: null
+  run:
+    dir: .
+
+debug: False
+jobname: test
+
+model:
+  name: "BAAI/glm-roberta-large" # BAAI/glm-roberta-large,t5-large, facebook/bart-large
+  max_length: 256 # dataset related
+  max_gen_length: 256 # dataset related
+data:
+  dataset: "multi_news" # currently support commonsense_qa, multi_news
+  # dataset: "commonsense_qa" # currently support commonsense_qa, multi_news
+  tokenizer: ${model.name} 
+  max_length: ${model.max_length} 
+  max_gen_length: ${model.max_gen_length} 
+  prompt_id: 0 # id in promptsource original_task=True name_l 
+  answer_prompt: "Answer:"
+optimizer:
+  lr: 1e-5
+  beta1: 0.9
+  beta2: 0.999
+  wd: 0.01
+trainer:
+  batch: 64 # batch in total
+  epochs: 10
+  lrscheduler: cosine
+  warmup_start: 1e-7
+  warmup_epochs: 1
+  num_workers: 1 # num_workers in total
+  pin_memory: True
+  log_interval: 100
+distributed:
+  backend: "nccl"
