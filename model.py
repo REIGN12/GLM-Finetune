@@ -26,6 +26,7 @@ class PGModel(nn.Module):
         res = self.model.generate(**data,
             max_new_tokens=self.model_config.max_gen_length,
             eos_token_id=self.tokenizer.eop_token_id,
+            pad_token_id=self.tokenizer.pad_token_id,
         **kwargs)
         res = self.tokenizer.batch_decode(res.tolist())
         pattern = r"<\|startofpiece\|>(.*?)<\|endofpiece\|>"
