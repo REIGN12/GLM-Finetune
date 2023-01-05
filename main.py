@@ -71,12 +71,7 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
         train_metrics = engine.state.metrics
         log_data["train_loss"] = train_metrics["train_loss"]
 
-        # test evaluation
-        test_evaluator.run(test_dataloader)
-        test_metrics = test_evaluator.state.metrics
-        log_data["test_rouge"] = test_metrics["test_rouge"]
-
-        # qualitative study
+        # qualitative study first
         model.eval()
         qualitative_num = cfg.trainer.qualitative_num
         qualitative_log_data = {}
@@ -95,10 +90,17 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
                         "label":label,
                     }
                 break
+        # log qualitative study
+        logger.log_master(qualitative_log_data,if_wandb=False)
 
+        # test evaluation
+        test_evaluator.run(test_dataloader)
+        test_metrics = test_evaluator.state.metrics
+        log_data["test_rouge"] = test_metrics["test_rouge"]
+
+        # log train/test evaluation
         logger.log_rank(log_data)
         logger.log_master(log_data)
-        logger.log_master(qualitative_log_data,if_wandb=False)
         return log_data
 
     @trainer.on(Events.ITERATION_COMPLETED(every=cfg.trainer.log_interval))
