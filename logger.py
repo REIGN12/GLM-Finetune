@@ -31,8 +31,9 @@ class Logger:
         self.logger.add(sys.stderr)
         if self.cfg.debug != True:
             wandb.login(key="a8c307987b041c73da9445e846682482ef2f526a")
-            wandb.init(project="PromptedGeneration", entity="reign")
-            wandb.config.update(self.cfg)
+            wandb.init(project="PromptedGeneration", entity="reign",
+                name=self.cfg.jobname,config=OmegaConf.to_container(self.cfg,resolve=True))
+            # wandb.config.update(self.cfg)
 
         self.logger.info("\nConfigs are:\n" + OmegaConf.to_yaml(self.cfg))
 
