@@ -30,7 +30,7 @@ class PGModel(nn.Module):
         **kwargs)
         res = self.tokenizer.batch_decode(res.tolist())
         pattern = r"<\|startofpiece\|>(.*?)(\Z|<\|endofpiece\|>)"
-        res = [re.search(pattern,txt,re.DOTALL).group(1) for txt in res]
+        res = [re.search(pattern,txt,re.DOTALL).group(1).strip() for txt in res]
         return res
 
     def build_generator(self):
