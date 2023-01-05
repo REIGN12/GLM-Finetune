@@ -41,13 +41,6 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
         optimizer.step()
         return loss.item()
 
-    def train_evaluate_step(engine:Engine, batch:Tensor) -> Tensor:
-        model.eval()
-        with torch.no_grad():
-            batch.to(idist.device())
-            loss = model(batch).loss
-        return loss.item()
-
     def test_evaluate_step(engine:Engine, batch:Tensor) -> Tensor:
         model.eval()
         labels = batch.pop("labels")
