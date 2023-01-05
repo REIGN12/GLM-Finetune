@@ -14,6 +14,7 @@ import ignite.distributed as idist
 from ignite.engine import Engine,Events
 from ignite import metrics
 from lrscheduler import build_lrscheduler
+from ignite.handlers import Checkpoint, global_step_from_engine
 
 def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
     # Setup logger
@@ -129,6 +130,12 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
 
     lrscheduler = build_lrscheduler(optimizer,cfg.trainer,len(train_dataset)//cfg.trainer.batch)
     trainer.add_event_handler(Events.ITERATION_STARTED,lrscheduler)
+
+    # checkpointing; distributed is automatically handled
+    to_save = {"model":model,"optimizer":optimizer,"trainer":trainer}
+    checkpoint_dir = f"{cfg.trainer.checkpoint_dir}/{cfg.jobname}"
+    checkpoint = Checkpoint(to_save,checkpoint_dir)#,global_step_from_engine(trainer))
+    test_evaluator.add_event_handler(Events.COMPLETED,checkpoint)
 
     trainer.run(train_dataloader,max_epochs=cfg.trainer.epochs)
 
