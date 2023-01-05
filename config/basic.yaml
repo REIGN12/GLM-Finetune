@@ -30,6 +30,7 @@ optimizer:
   wd: 0.01
 trainer:
   batch: 64 # batch in total
+  accumulate_steps: 1
   epochs: 10
   lrscheduler: cosine
   warmup_start: 1e-7

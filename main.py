@@ -36,10 +36,12 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
     def train_step(engine:Engine, batch:Tensor) -> Tensor:
         model.train()
         batch.to(idist.device())
-        optimizer.zero_grad()
         loss = model(batch).loss
+        loss = loss / cfg.trainer.accumulate_steps # accumulate gradients
         loss.backward()
-        optimizer.step()
+        if engine.state.iteration % cfg.trainer.accumulate_steps == 0:
+            optimizer.step()
+            optimizer.zero_grad()
         return loss.item()
 
     def test_evaluate_step(engine:Engine, batch:Tensor) -> Tensor:
