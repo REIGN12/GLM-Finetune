@@ -36,6 +36,7 @@ class PGDataCollator:
         res = self.tokenizer(prompts,padding=True,truncation=True,max_length=self.datacollator_config.max_length,return_tensors="pt")
         res = self.tokenizer.build_inputs_for_generation(res,max_gen_length=self.datacollator_config.max_gen_length)
         res['labels'] = answers
+        res['prompts'] = prompts
         return res
 
     def __call__(self, batch: List[Tuple[str,str]]) -> Dict[str, Tensor]:

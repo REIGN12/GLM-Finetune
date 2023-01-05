@@ -43,6 +43,7 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
 
     def test_evaluate_step(engine:Engine, batch:Tensor) -> Tensor:
         model.eval()
+        prompts = batch.pop("prompts")
         labels = batch.pop("labels")
         with torch.no_grad():
             batch.to(idist.device())
@@ -72,8 +73,29 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
         test_metrics = test_evaluator.state.metrics
         log_data["test_rouge"] = test_metrics["test_rouge"]
 
+        # qualitative study
+        model.eval()
+        qualitative_num = cfg.trainer.qualitative_num
+        qualitative_log_data = {}
+        with torch.no_grad():
+            for batch in test_dataloader:
+                prompts = batch.pop("prompts")
+                labels = batch.pop("labels")
+                batch.to(idist.device())
+                res = model.generate(batch)
+                res = res[:qualitative_num]
+                labels = labels[:qualitative_num]
+                for idx,(prompt,model_res,label) in enumerate(zip(prompts,res,labels)):
+                    qualitative_log_data[f"qualitative_{idx}"] = {
+                        "prompt":prompt,
+                        "model_res":model_res,
+                        "label":label,
+                    }
+                break
+
         logger.log_rank(log_data)
         logger.log_master(log_data)
+        logger.log_master(qualitative_log_data,if_wandb=False)
         return log_data
 
     @trainer.on(Events.ITERATION_COMPLETED(every=cfg.trainer.log_interval))

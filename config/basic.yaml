@@ -37,5 +37,6 @@ trainer:
   num_workers: 1 # num_workers in total
   pin_memory: True
   log_interval: 100
+  qualitative_num: 5
 distributed:
   backend: "nccl"
