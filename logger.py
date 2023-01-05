@@ -15,13 +15,13 @@ class Logger:
         log_str = "\t".join(f"{key}  {data[key]}" for key in data)
         self.logger.info(log_str)
 
-    def log_master(self,data:Dict):
+    def log_master(self,data:Dict,if_wandb:bool=True):
         """
         only called in master process
         """
         log_str = "\t".join(f"{key}  {data[key]}" for key in data)
         self.logger.info(log_str)
-        if self.cfg.debug != True:
+        if self.cfg.debug != True and if_wandb:
             wandb.log(data)
 
     def login(self):
