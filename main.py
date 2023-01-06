@@ -78,7 +78,8 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
         log_data["test_rouge"] = test_metrics["test_rouge"]
         # log test evaluation
         logger.log_rank(log_data)
-        logger.log_master(log_data)
+        if idist.get_rank() == 0:
+            logger.log_master(log_data)
         return log_data
     
     # @trainer.on(Events.EPOCH_STARTED) # for debug
@@ -114,11 +115,13 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
                     }
                 break
         # log qualitative study
-        logger.log_master(qualitative_log_data,if_wandb=False)
+        if idist.get_rank() == 0:
+            logger.log_master(qualitative_log_data,if_wandb=False)
 
         # log train evaluation
         logger.log_rank(log_data)
-        logger.log_master(log_data)
+        if idist.get_rank() == 0:
+            logger.log_master(log_data)
         return log_data
 
     @trainer.on(Events.ITERATION_COMPLETED(every=cfg.trainer.log_interval))
@@ -129,13 +132,15 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
             "lr":optimizer.param_groups[0]["lr"],
         }
         logger.log_rank(log_data)
-        logger.log_master(log_data)
+        if idist.get_rank() == 0:
+            logger.log_master(log_data)
 
     train_data_collator = PGDataCollator(cfg.data,"train")
     train_dataset = PGDataset(cfg.data,split="validation")
-    logger.log_master({
-        "train dataset prompt_key":f"{train_dataset.prompt_key}"
-    },if_wandb=False)
+    if idist.get_rank() == 0:
+        logger.log_master({
+            "train dataset prompt_key":f"{train_dataset.prompt_key}"
+        },if_wandb=False)
 
     train_dataloader = idist.auto_dataloader(
         train_dataset,batch_size=cfg.trainer.batch, 
