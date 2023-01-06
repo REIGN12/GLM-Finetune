@@ -51,8 +51,8 @@ class PGDataset(Dataset):
         self.max_length = dataset_config.max_length
         self.max_gen_length = dataset_config.max_gen_length
 
-        self.dataset = load_dataset(dataset_config.dataset,split=split)
         self.prompter = self.build_prompter()
+        self.dataset = load_dataset(*dataset_config.dataset.split("/"),split=split)
         self.answer_prompt = dataset_config.answer_prompt
         self.adapter = self.build_adapter()
 
