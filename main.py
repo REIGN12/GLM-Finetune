@@ -8,6 +8,7 @@ from model import PGModel
 import torch
 from torch import optim
 
+from typing import Tuple,List
 from torch import Tensor
 
 import ignite.distributed as idist
@@ -44,7 +45,7 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
             optimizer.zero_grad()
         return loss.item()
 
-    def test_evaluate_step(engine:Engine, batch:Tensor) -> Tensor:
+    def test_evaluate_step(engine:Engine, batch:Tensor) -> Tuple[List[str],List[str]]:
         model.eval()
         prompts = batch.pop("prompts")
         labels = batch.pop("labels")
@@ -60,7 +61,12 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
     # metrics
     train_loss = metrics.Average()
     train_loss.attach(trainer,"train_loss")
-    test_rouge = metrics.Rouge(output_transform=lambda output: [[item.split() for item in res] for res in output])
+    def rouge_output_transform(output:Tuple[List[str],List[str]]) -> Tuple[List[List[str]],List[List[List[str]]]]:
+        res,labels = output
+        res = [item.split() for item in res]
+        labels = [[item.split()] for item in labels]
+        return res,labels
+    test_rouge = metrics.Rouge(output_transform=rouge_output_transform)
     test_rouge.attach(test_evaluator,"test_rouge")
     
     # @trainer.on(Events.EPOCH_STARTED) # for debug
