@@ -136,7 +136,7 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
             logger.log_master(log_data)
 
     train_data_collator = PGDataCollator(cfg.data,"train")
-    train_dataset = PGDataset(cfg.data,split="validation")
+    train_dataset = PGDataset(cfg.data,split="train")
     if idist.get_rank() == 0:
         logger.log_master({
             "train dataset prompt_key":f"{train_dataset.prompt_key}"
