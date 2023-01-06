@@ -13,8 +13,8 @@ jobname: test
 
 model:
   name: "BAAI/glm-roberta-large" # BAAI/glm-roberta-large,t5-large, facebook/bart-large
-  max_length: 256 # dataset related
-  max_gen_length: 256 # dataset related
+  max_length: 384 # dataset related
+  max_gen_length: 128 # dataset related
 data:
   dataset: "multi_news" # currently support commonsense_qa, multi_news
   # dataset: "commonsense_qa" # currently support commonsense_qa, multi_news
