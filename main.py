@@ -69,6 +69,18 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
     test_rouge = metrics.Rouge(output_transform=rouge_output_transform)
     test_rouge.attach(test_evaluator,"test_rouge")
     
+    @trainer.on(Events.COMPLETED)
+    def log_final_results(engine:Engine):
+        log_data = { "epoch":engine.state.epoch, }
+        # test evaluation of rouge is too slow, so we only evaluate it at the end
+        test_evaluator.run(test_dataloader)
+        test_metrics = test_evaluator.state.metrics
+        log_data["test_rouge"] = test_metrics["test_rouge"]
+        # log test evaluation
+        logger.log_rank(log_data)
+        logger.log_master(log_data)
+        return log_data
+    
     # @trainer.on(Events.EPOCH_STARTED) # for debug
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_epoch_results(engine:Engine):
@@ -104,12 +116,7 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
         # log qualitative study
         logger.log_master(qualitative_log_data,if_wandb=False)
 
-        # test evaluation
-        test_evaluator.run(test_dataloader)
-        test_metrics = test_evaluator.state.metrics
-        log_data["test_rouge"] = test_metrics["test_rouge"]
-
-        # log train/test evaluation
+        # log train evaluation
         logger.log_rank(log_data)
         logger.log_master(log_data)
         return log_data
