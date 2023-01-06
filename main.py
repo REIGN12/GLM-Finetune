@@ -81,6 +81,7 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
         model.eval()
         qualitative_num = cfg.trainer.qualitative_num
         qualitative_log_data = {}
+        qualitative_rouge = metrics.Rouge() # calculate rouge for qualitative study
         with torch.no_grad():
             for batch in test_dataloader:
                 prompts = batch.pop("prompts")
@@ -89,6 +90,10 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
                 res = model.generate(batch)
                 res = res[:qualitative_num]
                 labels = labels[:qualitative_num]
+                # calculcate rouge for qulitative study examples
+                qualitative_rouge.update(([item.split() for item in res],[[item.split()] for item in labels]))
+                qualitative_log_data["qualitative_rouge"] = qualitative_rouge.compute()
+                # log qualitative study examples
                 for idx,(prompt,model_res,label) in enumerate(zip(prompts,res,labels)):
                     qualitative_log_data[f"qualitative_{idx}"] = {
                         "prompt":prompt,
