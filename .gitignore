@@ -3,3 +3,4 @@ outputs
 wandb
 
 checkpoints
+*.log
