@@ -39,6 +39,6 @@ trainer:
   pin_memory: True
   log_interval: 100
   qualitative_num: 5
-  checkpoint_dir: "." # path for ckps
+  checkpoint_dir: "./checkpoints" # path for ckps
 distributed:
   backend: "nccl"
