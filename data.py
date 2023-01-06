@@ -51,8 +51,8 @@ class PGDataset(Dataset):
         self.max_length = dataset_config.max_length
         self.max_gen_length = dataset_config.max_gen_length
 
-        self.prompter = self.build_prompter()
         self.dataset = load_dataset(*dataset_config.dataset.split("/"),split=split)
+        self.prompt_key,self.prompter = self.build_prompter()
         self.answer_prompt = dataset_config.answer_prompt
         self.adapter = self.build_adapter()
 
@@ -82,7 +82,7 @@ class PGDataset(Dataset):
         # filter out those not original_task
         prompt_key = [name for name in all_prompts.all_template_names if all_prompts[name].metadata.original_task ]
         prompter = all_prompts[prompt_key[self.dataset_config.prompt_id]]
-        return prompter
+        return prompt_key,prompter
 
     def __len__(self)->int:
         return len(self.dataset)

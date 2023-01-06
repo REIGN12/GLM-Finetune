@@ -115,6 +115,10 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
 
     train_data_collator = PGDataCollator(cfg.data,"train")
     train_dataset = PGDataset(cfg.data,split="train")
+    logger.log_master({
+        "train dataset prompt_key":f"{train_dataset.prompt_key}"
+    },if_wandb=False)
+
     train_dataloader = idist.auto_dataloader(
         train_dataset,batch_size=cfg.trainer.batch, 
         num_workers=cfg.trainer.num_workers,
