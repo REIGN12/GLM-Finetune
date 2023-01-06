@@ -4,3 +4,6 @@ wandb
 
 checkpoints
 *.log
+
+amlt
+.amltconfig
