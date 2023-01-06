@@ -139,7 +139,7 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
     to_save = {"model":model,"optimizer":optimizer,"trainer":trainer}
     checkpoint_dir = f"{cfg.trainer.checkpoint_dir}/{cfg.jobname}"
     checkpoint = Checkpoint(to_save,checkpoint_dir)#,global_step_from_engine(trainer))
-    test_evaluator.add_event_handler(Events.COMPLETED,checkpoint)
+    test_evaluator.add_event_handler(Events.STARTED,checkpoint)
 
     trainer.run(train_dataloader,max_epochs=cfg.trainer.epochs)
 
