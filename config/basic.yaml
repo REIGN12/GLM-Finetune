@@ -10,7 +10,7 @@ hydra:
 
 debug: False
 jobname: test
-
+task: "pc" # pg:generation, pc:choice
 model:
   name: "BAAI/glm-roberta-large" # BAAI/glm-roberta-large,t5-large, facebook/bart-large
   max_length: 384 # dataset related

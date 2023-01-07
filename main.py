@@ -2,8 +2,8 @@ import hydra
 from omegaconf import DictConfig
 
 from logger import Logger
-from data import PGDataset,PGDataCollator
-from model import PGModel
+from data import PGDataset,PGDataCollator,PCDataset,PCDataCollator
+from model import PGModel, PCModel
 
 import torch
 from torch import optim
@@ -25,7 +25,12 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
     logger.log_rank({"rank":idist.get_rank(),"local_rank":local_rank,"world_size":idist.get_world_size()})
 
     # Setup model
-    model = PGModel(cfg.model)
+    if cfg.task == "pg":
+        model = PGModel(cfg.model)
+    elif cfg.task == "pc":
+        model = PCModel(cfg.model)
+    else:
+        raise NotImplementedError(f"Task {cfg.task} is not supported")
     model = idist.auto_model(model)
     # Setup optimizer
     optimizer = optim.AdamW(model.parameters(),
@@ -45,7 +50,7 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
             optimizer.zero_grad()
         return loss.item()
 
-    def test_evaluate_step(engine:Engine, batch:Tensor) -> Tuple[List[str],List[str]]:
+    def pg_test_evaluate_step(engine:Engine, batch:Tensor) -> Tuple[List[str],List[str]]:
         model.eval()
         prompts = batch.pop("prompts")
         labels = batch.pop("labels")
@@ -57,20 +62,40 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
                 res = model.generate(batch)
             return res, labels
 
+    def pc_test_evaluate_step(engine:Engine, batch:Tensor) -> Tuple[List[str],List[str]]:
+        model.eval()
+        with torch.no_grad():
+            batch.to(idist.device())
+            labels = batch.pop("labels")
+            res = model(batch).logits
+            return res, labels
+
     # setup engines
     trainer = Engine(train_step)
+    if cfg.task == "pg":
+        test_evaluate_step = pg_test_evaluate_step
+    elif cfg.task == "pc":
+        test_evaluate_step = pc_test_evaluate_step
+    else:
+        raise NotImplementedError(f"Task {cfg.task} is not supported")
     test_evaluator = Engine(test_evaluate_step)
 
     # metrics
     train_loss = metrics.Average()
     train_loss.attach(trainer,"train_loss")
-    def rouge_output_transform(output:Tuple[List[str],List[str]]) -> Tuple[List[List[str]],List[List[List[str]]]]:
-        res,labels = output
-        res = [item.split() for item in res]
-        labels = [[item.split()] for item in labels]
-        return res,labels
-    test_rouge = metrics.Rouge(variants=['L',1,2],output_transform=rouge_output_transform)
-    test_rouge.attach(test_evaluator,"test_rouge")
+    if cfg.task == "pg":
+        def rouge_output_transform(output:Tuple[List[str],List[str]]) -> Tuple[List[List[str]],List[List[List[str]]]]:
+            res,labels = output
+            res = [item.split() for item in res]
+            labels = [[item.split()] for item in labels]
+            return res,labels
+        test_rouge = metrics.Rouge(variants=['L',1,2],output_transform=rouge_output_transform)
+        test_rouge.attach(test_evaluator,"test_rouge")
+    elif cfg.task == "pc":
+        test_acc = metrics.Accuracy()
+        test_acc.attach(test_evaluator,"test_acc")
+    else:
+        raise NotImplementedError(f"Task {cfg.task} is not supported")
     
     @trainer.on(Events.COMPLETED)
     def log_final_results(engine:Engine):
@@ -78,7 +103,12 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
         # test evaluation of rouge is too slow, so we only evaluate it at the end
         test_evaluator.run(test_dataloader)
         test_metrics = test_evaluator.state.metrics
-        log_data["test_rouge"] = test_metrics["test_rouge"]
+        if cfg.task == "pg":
+            log_data["test_rouge"] = test_metrics["test_rouge"]
+        elif cfg.task == "pc":
+            log_data["test_acc"] = test_metrics["test_acc"]
+        else:
+            raise NotImplementedError(f"Task {cfg.task} is not supported")
         # log test evaluation
         logger.log_rank(log_data)
         if idist.get_rank() == 0:
@@ -93,36 +123,42 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
         train_metrics = engine.state.metrics
         log_data["train_loss"] = train_metrics["train_loss"]
 
-        # qualitative study first
         model.eval()
-        qualitative_num = cfg.trainer.qualitative_num
-        qualitative_log_data = {}
-        qualitative_rouge = metrics.Rouge() # calculate rouge for qualitative study
-        with torch.no_grad():
-            for batch in test_dataloader:
-                prompts = batch.pop("prompts")
-                labels = batch.pop("labels")
-                batch.to(idist.device())
-                if idist.get_world_size() > 1:
-                    res = model.module.generate(batch)
-                else:
-                    res = model.generate(batch)
-                res = res[:qualitative_num]
-                labels = labels[:qualitative_num]
-                # calculcate rouge for qulitative study examples
-                qualitative_rouge.update(([item.split() for item in res],[[item.split()] for item in labels]))
-                qualitative_log_data["qualitative_rouge"] = qualitative_rouge.compute()
-                # log qualitative study examples
-                for idx,(prompt,model_res,label) in enumerate(zip(prompts,res,labels)):
-                    qualitative_log_data[f"qualitative_{idx}"] = {
-                        "prompt":prompt,
-                        "model_res":model_res,
-                        "label":label,
-                    }
-                break
-        # log qualitative study
-        if idist.get_rank() == 0:
-            logger.log_master(qualitative_log_data,if_wandb=False)
+        if cfg.task == "pg":
+            # qualitative study first
+            qualitative_num = cfg.trainer.qualitative_num
+            qualitative_log_data = {}
+            qualitative_rouge = metrics.Rouge() # calculate rouge for qualitative study
+            with torch.no_grad():
+                for batch in test_dataloader:
+                    prompts = batch.pop("prompts")
+                    labels = batch.pop("labels")
+                    batch.to(idist.device())
+                    if idist.get_world_size() > 1:
+                        res = model.module.generate(batch)
+                    else:
+                        res = model.generate(batch)
+                    res = res[:qualitative_num]
+                    labels = labels[:qualitative_num]
+                    # calculcate rouge for qulitative study examples
+                    qualitative_rouge.update(([item.split() for item in res],[[item.split()] for item in labels]))
+                    qualitative_log_data["qualitative_rouge"] = qualitative_rouge.compute()
+                    # log qualitative study examples
+                    for idx,(prompt,model_res,label) in enumerate(zip(prompts,res,labels)):
+                        qualitative_log_data[f"qualitative_{idx}"] = {
+                            "prompt":prompt,
+                            "model_res":model_res,
+                            "label":label,
+                        }
+                    break
+            # log qualitative study
+            if idist.get_rank() == 0:
+                logger.log_master(qualitative_log_data,if_wandb=False)
+        elif cfg.task == "pc":
+            # test accuracy
+            test_evaluator.run(test_dataloader)
+            acc_metrics = test_evaluator.state.metrics
+            log_data['test_acc'] = acc_metrics['test_acc']
 
         # log train evaluation
         logger.log_rank(log_data)
@@ -141,8 +177,14 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
         if idist.get_rank() == 0:
             logger.log_master(log_data)
 
-    train_data_collator = PGDataCollator(cfg.data,"train")
-    train_dataset = PGDataset(cfg.data,split="train")
+    if cfg.task=="pg":
+        train_data_collator = PGDataCollator(cfg.data,"train")
+        train_dataset = PGDataset(cfg.data,split="train")
+    elif cfg.task=="pc":
+        train_data_collator = PCDataCollator(cfg.data)
+        train_dataset = PCDataset(cfg.data,split="train")
+    else:
+        raise NotImplementedError(f"Task {cfg.task} is not supported")
     if idist.get_rank() == 0:
         logger.log_master({
             "train dataset prompt_key":f"{train_dataset.prompt_key}"
@@ -155,8 +197,12 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
         collate_fn=train_data_collator,
         shuffle=True,drop_last=True,
     )
-    test_data_collator = PGDataCollator(cfg.data,"test")
-    test_dataset = PGDataset(cfg.data,split="test")
+    if cfg.task=="pg":
+        test_data_collator = PGDataCollator(cfg.data,"test")
+        test_dataset = PGDataset(cfg.data,split="test")
+    elif cfg.task=="pc":
+        test_data_collator = PCDataCollator(cfg.data)
+        test_dataset = PCDataset(cfg.data,split="validation")
     test_dataloader = idist.auto_dataloader(
         test_dataset,batch_size=cfg.trainer.batch,
         num_workers=cfg.trainer.num_workers,
