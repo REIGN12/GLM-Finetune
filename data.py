@@ -12,6 +12,38 @@ from datasets import load_dataset
 # prompt support
 from promptsource.templates import DatasetTemplates
 
+class PCDataset(Dataset):
+    def __init__(self,dataset_config: DictConfig,split:str):
+        self.dataset_config = dataset_config
+        self.dataset = load_dataset(*dataset_config.dataset.split("/"),split=split)
+        self.prompt_key,self.prompter = self.build_prompter()
+        self.adapter = self.build_adapter()
+
+    def __len__(self):
+        return len(self.dataset)
+    def __getitem__(self, index: int) -> Tuple[str,List[str],int]:
+        data = self.dataset[index]
+        prompt,choice = self.prompter.apply(data)
+        choices_l = self.prompter.get_answer_choices_list(data)
+        choice_id = choices_l.index(choice)
+        prompt = prompt + "\n\n" + self.dataset_config.answer_prompt
+        res = self.adapter(prompt,choices_l,choice_id)
+        return res
+    def build_adapter(self):
+        if "glm" in self.dataset_config.tokenizer:
+            return self.glm_adapter
+        else:
+            raise NotImplementedError("Not implemented yet")
+    def glm_adapter(self,prompt:str,choices_l:List[str],choice_id:int) -> Tuple[str,List[str],int]:
+        prompt += "[MASK]"
+        return prompt,choices_l,choice_id
+    def build_prompter(self):
+        all_prompts = DatasetTemplates(self.dataset_config.dataset)
+        # filter out those not original_task
+        prompt_key = [name for name in all_prompts.all_template_names if all_prompts[name].metadata.original_task ]
+        prompter = all_prompts[prompt_key[self.dataset_config.prompt_id]]
+        return prompt_key,prompter
+
 class PGDataCollator:
     def __init__(self,datacollator_config: DictConfig,split:str):
         self.datacollator_config = datacollator_config
