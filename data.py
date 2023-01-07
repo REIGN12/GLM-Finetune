@@ -1,6 +1,7 @@
 from typing import Dict,Tuple,List
 from torch import Tensor
 
+import torch
 from torch.utils.data import Dataset
 from omegaconf import DictConfig
 
@@ -11,6 +12,28 @@ from datasets import load_dataset
 
 # prompt support
 from promptsource.templates import DatasetTemplates
+
+class PCDataCollator:
+    def __init__(self,datacollator_config: DictConfig):
+        self.datacollator_config = datacollator_config
+        self.tokenizer = AutoTokenizer.from_pretrained(self.datacollator_config.tokenizer,trust_remote_code=True)
+        self.collator = self.build_collator()
+    def __call__(self, batch:List[Tuple[str,List[str],int]]) -> Dict[str,Tensor]:
+        return self.collator(batch)
+    def build_collator(self):
+        if "glm" in self.datacollator_config.tokenizer:
+            return self.glm_collator
+        else:
+            raise NotImplementedError("Not implemented yet")
+    def glm_collator(self,batch:List[Tuple[str,List[str],int]]) -> Dict[str,Tensor]:
+        prompts,choices_l,choice_ids = zip(*batch)
+        prompts = self.tokenizer(prompts,return_tensors="pt",
+                    padding=True,truncation=True,max_length=self.datacollator_config.max_length
+        )
+        res = self.tokenizer.build_inputs_for_multiple_choice(prompts,choices_l)
+        labels = torch.tensor(choice_ids)
+        res['labels'] = labels
+        return res
 
 class PCDataset(Dataset):
     def __init__(self,dataset_config: DictConfig,split:str):
