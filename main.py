@@ -51,7 +51,10 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
         labels = batch.pop("labels")
         with torch.no_grad():
             batch.to(idist.device())
-            res = model.generate(batch)
+            if idist.get_world_size() > 1:
+                res = model.module.generate(batch)
+            else:
+                res = model.generate(batch)
             return res, labels
 
     # setup engines
@@ -100,7 +103,10 @@ def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
                 prompts = batch.pop("prompts")
                 labels = batch.pop("labels")
                 batch.to(idist.device())
-                res = model.generate(batch)
+                if idist.get_world_size() > 1:
+                    res = model.module.generate(batch)
+                else:
+                    res = model.generate(batch)
                 res = res[:qualitative_num]
                 labels = labels[:qualitative_num]
                 # calculcate rouge for qulitative study examples
