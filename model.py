@@ -1,11 +1,24 @@
 import re
 
 from torch import nn
-from transformers import AutoModelForSeq2SeqLM,AutoTokenizer
+from transformers import AutoModelForSeq2SeqLM,AutoTokenizer,AutoModelForMultipleChoice
 
 from typing import Dict,List
 from omegaconf import DictConfig
 from torch import Tensor
+
+class PCModel(nn.Module):
+    """
+    Prompted Choice Model
+    """
+    def __init__(self,model_config:DictConfig) -> None:
+        super(PCModel,self).__init__()
+        self.model_config = model_config
+        self.model = AutoModelForMultipleChoice.from_pretrained(model_config.name,trust_remote_code=True)
+        
+    def forward(self,data:Dict[str,Tensor]):
+        res = self.model(**data)
+        return res
 
 class PGModel(nn.Module):
     """
