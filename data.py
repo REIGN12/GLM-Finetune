@@ -127,7 +127,7 @@ class PGDataCollator:
         prompts,answers = [list(item) for item in zip(*batch)]
         self.tokenizer.truncation_side = 'left' 
         res = self.tokenizer(prompts,padding=True,truncation=True,max_length=self.datacollator_config.max_length,return_tensors="pt")
-        res['labels'] = answers[len("<extra_id_0> "):] # rm the prepended <extra_id_0>
+        res['labels'] = [answer[len("<extra_id_0> "):] for answer in answers] # rm the prepended <extra_id_0>
         res['prompts'] = prompts
         return res
     def glm_train_collator(self,batch: List[Tuple[str,str]]) -> Dict[str,Tensor]:
