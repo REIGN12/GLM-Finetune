@@ -35,6 +35,13 @@ class PGModel(nn.Module):
         return res
     def generate(self,data:Dict[str,Tensor],**kwargs)->List[str]:
         return self.generator(data,**kwargs)
+    def t5_generator(self,data:Dict[str,Tensor],**kwargs)->List[str]:
+        res = self.model.generate(**data,
+            max_length=self.model_config.max_gen_length, **kwargs)
+        res = self.tokenizer.batch_decode(res.tolist())
+        pattern = r"(<pad>|<extra_id_0>)*(.*?)(<pad>|\Z|</s>)"
+        res = [re.search(pattern,txt,re.DOTALL).group(2).strip() for txt in res]
+        return res
     def glm_generator(self,data:Dict[str,Tensor],**kwargs)->List[str]:
         res = self.model.generate(**data,
             max_new_tokens=self.model_config.max_gen_length,
@@ -49,6 +56,8 @@ class PGModel(nn.Module):
     def build_generator(self):
         if "glm" in self.model_config.name:
             return self.glm_generator
+        elif "t5" in self.model_config.name:
+            return self.t5_generator
         else:
             raise NotImplementedError("Not implemented yet")
 
