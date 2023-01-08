@@ -110,8 +110,26 @@ class PGDataCollator:
                 return self.glm_train_collator
             else:
                 return self.glm_test_collator
+        elif "t5" in self.datacollator_config.tokenizer:
+            if self.split == "train":
+                return self.t5_train_collator
+            else:
+                return self.t5_test_collator
         else:
             raise NotImplementedError("Not implemented yet")
+    def t5_train_collator(self,batch: List[Tuple[str,str]]) -> Dict[str,Tensor]:
+        prompts,answers = [list(item) for item in zip(*batch)]
+        self.tokenizer.truncation_side = 'left' 
+        res = self.tokenizer(prompts,padding=True,truncation=True,max_length=self.datacollator_config.max_length,return_tensors="pt")
+        res['labels'] = self.tokenizer(answers,padding=True,truncation=True,max_length=self.datacollator_config.max_length,return_tensors="pt")['input_ids']
+        return res
+    def t5_test_collator(self,batch: List[Tuple[str,str]]) -> Dict[str,Tensor]:
+        prompts,answers = [list(item) for item in zip(*batch)]
+        self.tokenizer.truncation_side = 'left' 
+        res = self.tokenizer(prompts,padding=True,truncation=True,max_length=self.datacollator_config.max_length,return_tensors="pt")
+        res['labels'] = answers[len("<extra_id_0> "):] # rm the prepended <extra_id_0>
+        res['prompts'] = prompts
+        return res
     def glm_train_collator(self,batch: List[Tuple[str,str]]) -> Dict[str,Tensor]:
         prompts,answers = [list(item) for item in zip(*batch)]
         res = self.tokenizer(prompts,padding=True,truncation=True,max_length=self.datacollator_config.max_length,return_tensors="pt")
@@ -161,6 +179,13 @@ class PGDataset(Dataset):
         prompt += "[MASK]"
         res = prompt,answer
         return res
+
+    def t5_adapter(self,prompted_data):
+        prompt,answer = prompted_data
+        # add sentinel token for prompt and answer
+        prompt = f'{prompt} <extra_id_0>'
+        answer = f'<extra_id_0> {answer}'
+        return prompt,answer
         return res
 
     def build_prompter(self):
