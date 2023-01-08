@@ -27,6 +27,8 @@ class PCDataCollator:
             return self.glm_collator
         elif "roberta" in self.datacollator_config.tokenizer:
             return self.roberta_collator
+        elif 'bert' in self.datacollator_config.tokenizer:
+            return self.roberta_collator
         else:
             raise NotImplementedError("Not implemented yet")
     def roberta_collator(self,batch:List[Tuple[str,List[str],int]]) -> Dict[str,Tensor]:
@@ -79,6 +81,8 @@ class PCDataset(Dataset):
         if "glm" in self.dataset_config.tokenizer:
             return self.glm_adapter
         elif "roberta" in self.dataset_config.tokenizer:
+            return self.roberta_adapter
+        elif 'bert' in self.dataset_config.tokenizer:
             return self.roberta_adapter
         else:
             raise NotImplementedError("Not implemented yet")
