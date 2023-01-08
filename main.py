@@ -1,3 +1,4 @@
+import warnings
 import hydra
 from omegaconf import DictConfig
 
@@ -18,6 +19,9 @@ from lrscheduler import build_lrscheduler
 from ignite.handlers import Checkpoint, global_step_from_engine
 
 def main_engine(local_rank: int, cfg: DictConfig,**kwargs):
+    # ignore warnings
+    if not cfg.debug:
+        warnings.filterwarnings("ignore")
     # Setup logger
     logger = Logger(cfg)
     if idist.get_rank() == 0:
