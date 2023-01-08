@@ -13,6 +13,8 @@ from datasets import load_dataset
 # prompt support
 from promptsource.templates import DatasetTemplates
 
+from einops import rearrange
+
 class PCDataCollator:
     def __init__(self,datacollator_config: DictConfig):
         self.datacollator_config = datacollator_config
@@ -23,8 +25,29 @@ class PCDataCollator:
     def build_collator(self):
         if "glm" in self.datacollator_config.tokenizer:
             return self.glm_collator
+        elif "roberta" in self.datacollator_config.tokenizer:
+            return self.roberta_collator
         else:
             raise NotImplementedError("Not implemented yet")
+    def roberta_collator(self,batch:List[Tuple[str,List[str],int]]) -> Dict[str,Tensor]:
+        prompt_l = []
+        choice_l = []
+        choice_ids = []
+        for item in batch:
+            for choice in item[1]:
+                prompt_l.append(item[0])
+                choice_l.append(choice)
+            choice_ids.append(item[2])
+        res = self.tokenizer(prompt_l,choice_l,
+                    return_tensors="pt",
+                    padding=True,truncation=True,max_length=self.datacollator_config.max_length)
+        for key in res:
+            res[key] = rearrange(res[key],'(b c) l -> b c l',b=len(batch),c=len(item[1])) 
+
+        labels = torch.tensor(choice_ids)
+        res['labels'] = labels
+        return res
+
     def glm_collator(self,batch:List[Tuple[str,List[str],int]]) -> Dict[str,Tensor]:
         prompts,choices_l,choice_ids = zip(*batch)
         prompts = self.tokenizer(prompts,return_tensors="pt",
@@ -55,8 +78,12 @@ class PCDataset(Dataset):
     def build_adapter(self):
         if "glm" in self.dataset_config.tokenizer:
             return self.glm_adapter
+        elif "roberta" in self.dataset_config.tokenizer:
+            return self.roberta_adapter
         else:
             raise NotImplementedError("Not implemented yet")
+    def roberta_adapter(self,prompt:str,choices_l:List[str],choice_id:int) -> Tuple[str,List[str],int]:
+        return prompt,choices_l,choice_id
     def glm_adapter(self,prompt:str,choices_l:List[str],choice_id:int) -> Tuple[str,List[str],int]:
         prompt += "[MASK]"
         return prompt,choices_l,choice_id
