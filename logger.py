@@ -1,3 +1,4 @@
+import os
 import sys
 from typing import Dict
 from omegaconf import OmegaConf,DictConfig
@@ -29,9 +30,15 @@ class Logger:
         only login once in distributed training
         """
         self.logger.add(sys.stderr)
+        # if you do not want to use wandb, you can set self.cfg.debug = True
         if self.cfg.debug != True:
-            wandb.login(key="a8c307987b041c73da9445e846682482ef2f526a")
-            wandb.init(project="PromptedGeneration", entity="reign",
+            # you can use export VAR=VALUE to set environment variables before running the script
+            wandb_var_l = ["WANDB_API_KEY","WANDB_ENTITY","WANDB_PROJECT"]
+            for wandb_var in wandb_var_l:
+                if os.environ.get(wandb_var) is None:
+                    os.environ[wandb_var] = input(f"Please input your {wandb_var}:")
+            wandb.login(key=os.environ['WANDB_API_KEY'])
+            wandb.init(project=os.environ['WANDB_PROJECT'], entity=os.environ['WANDB_ENTITY'], 
                 name=self.cfg.jobname,config=OmegaConf.to_container(self.cfg,resolve=True))
             # wandb.config.update(self.cfg)
 
