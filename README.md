@@ -26,6 +26,7 @@ torchrun --nproc_per_node <YOUR_GPU_NUM> main.py \
     task="pc" \ # this is a Prompted Choice task
     data.dataset="commonsense_qa" \
     model.name="BAAI/glm-roberta-large" \ # we also support bert-large-uncased, roberta-large
+    data.prompt_id="2" \ # prompt_id of original_task=True prompt templates from promptsource; for the name of each prompt, you can refer to training log as you start the job, which will be like "train dataset prompt_key  ['answer_given_question_without_options', 'most_suitable_answer', 'question_answering', 'question_to_answer_index']"
     jobname=<ANY_NAME_YOU_LIKE> \
     debug=False \ # If you want to disable wandb, set debug=True; you can setup your wandb related var as env var, or just type it when the program need it; refer to logger.py for details
     optimizer.lr="1r-5" \ # no lr scaling will be done, this lr will be the final lr
