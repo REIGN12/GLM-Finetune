@@ -12,7 +12,9 @@ debug: False
 jobname: test
 task: "pc" # pg:generation, pc:choice
 model:
-  name: "BAAI/glm-roberta-large" # BAAI/glm-roberta-large,t5-large, facebook/bart-large
+  # for pg: BAAI/glm-roberta-large,t5-large
+  # for pc: BAAI/glm-roberta-large, bert-large-uncased, roberta-large
+  name: "BAAI/glm-roberta-large" 
   max_length: 384 # dataset related
   max_gen_length: 128 # dataset related
 data:
