@@ -10,6 +10,13 @@ Student ID: 2022312848
 
 
 ## How to Train and Eval
+### Dependency
+You can activate your own conda env and run command
+```bash
+bash env_setup.sh cuda # If you are running on nvidia GPUs
+
+bash env_setup.sh rocm # If you are running on amd GPUs
+```
 Provide the command and dependency for reproducing the results
 
 ## Results
