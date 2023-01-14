@@ -54,4 +54,64 @@ torchrun --nproc_per_node <YOUR_GPU_NUM> main.py \
 ## Results
 Report final performance and other methods.
 
+The final epoch accuracy using above commands are 64.22% on validation set. 
+For RoBERTa-Large and BERT-Large, we tuning the learning rate and the best performances are 74.59% and 62.90% for each.
+
+| Model | Accuracy |
+|:---:|:---:|
+glm-roberta-large | 64.22 |
+roberta-large | 74.59 |
+bert-large-uncased | 62.90 |
+
 ## Reference
+### Dataset
+commonsense_qa dataset paper
+```latex
+@inproceedings{Talmor2019,
+  title = {{{CommonsenseQA}}: {{A Question Answering Challenge Targeting Commonsense Knowledge}}},
+  shorttitle = {{{CommonsenseQA}}},
+  booktitle = {Proceedings of the 2019 {{Conference}} of the {{North American Chapter}} of the {{Association}} for {{Computational Linguistics}}: {{Human Language Technologies}}, {{Volume}} 1 ({{Long}} and {{Short Papers}})},
+  author = {Talmor, Alon and Herzig, Jonathan and Lourie, Nicholas and Berant, Jonathan},
+  date = {2019-06},
+  pages = {4149--4158},
+  publisher = {{Association for Computational Linguistics}},
+  location = {{Minneapolis, Minnesota}},
+  doi = {10.18653/v1/N19-1421},
+  url = {https://aclanthology.org/N19-1421},
+  urldate = {2023-01-07},
+  eventtitle = {{{NAACL-HLT}} 2019}
+}
+```
+commonsense_qa huggingface link are mentioned in above.
+
+roberta and bert we are directly using huggingface implementation. The original papers are:
+```latex
+@misc{Liu2019,
+  title = {{{RoBERTa}}: {{A Robustly Optimized BERT Pretraining Approach}}},
+  shorttitle = {{{RoBERTa}}},
+  author = {Liu, Yinhan and Ott, Myle and Goyal, Naman and Du, Jingfei and Joshi, Mandar and Chen, Danqi and Levy, Omer and Lewis, Mike and Zettlemoyer, Luke and Stoyanov, Veselin},
+  date = {2019-07-26},
+  number = {arXiv:1907.11692},
+  eprint = {1907.11692},
+  eprinttype = {arxiv},
+  primaryclass = {cs},
+  publisher = {{arXiv}},
+  url = {http://arxiv.org/abs/1907.11692},
+  urldate = {2023-01-07},
+  archiveprefix = {arXiv},
+  version = {1}
+}
+
+@unpublished{devlinBERTPretrainingDeep2019,
+  title = {{{BERT}}: {{Pre-training}} of {{Deep Bidirectional Transformers}} for {{Language Understanding}}},
+  shorttitle = {{{BERT}}},
+  author = {Devlin, Jacob and Chang, Ming-Wei and Lee, Kenton and Toutanova, Kristina},
+  date = {2019-05-24},
+  eprint = {1810.04805},
+  eprinttype = {arxiv},
+  primaryclass = {cs},
+  url = {http://arxiv.org/abs/1810.04805},
+  urldate = {2022-04-12},
+  archiveprefix = {arXiv}
+}
+```
