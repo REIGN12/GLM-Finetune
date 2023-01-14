@@ -17,7 +17,23 @@ bash env_setup.sh cuda # If you are running on nvidia GPUs
 
 bash env_setup.sh rocm # If you are running on amd GPUs
 ```
-Provide the command and dependency for reproducing the results
+### Training and Evaluation
+You can run `python main.py --help` or directly go to `./config/basic.yaml` to see all the supported configuration.
+
+To run the distributed training, which will evaluate the results along the way; per step loss, per epoch loss and per epoch accuracy will be recorded:
+```bash
+torchrun --nproc_per_node <YOUR_GPU_NUM> main.py \
+    task="pc" \ # this is a Prompted Choice task
+    data.dataset="commonsense_qa" \
+    model.name="BAAI/glm-roberta-large" \ # we also support bert-large-uncased, roberta-large
+    jobname=<ANY_NAME_YOU_LIKE> \
+    debug=False \ # If you want to disable wandb, set debug=True; you can setup your wandb related var as env var, or just type it when the program need it; refer to logger.py for details
+    optimizer.lr="1r-5" \ # no lr scaling will be done, this lr will be the final lr
+    trainer.batch="32" \ # this is the total batch summed in all cards
+    trainer.accumulate_steps="2" \ # we support gradient accumulate steps to have larger effective batch size
+    trainer.epochs="10" trainer.warmup_epochs="1" # we use linear warmup and cosine decay
+    # there are some more configs can be changed, please refer to ./config/basic.yaml for details and simply follow the pattern here
+```
 
 ## Results
 Report final performance and other methods.
