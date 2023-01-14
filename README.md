@@ -1,4 +1,4 @@
-# Dataset Name as Title
+# commonsense_qa
 
 Author: Jingcheng Hu, hujc22@mails.tsinghua.edu.cn, https://reign12.github.io/
 
@@ -6,8 +6,23 @@ Student ID: 2022312848
 
 ## Task Description
 ### Dataset Statistics
-### Task Introduction
+We are following the train-validation-test split from [Huggingface commonsense_qa](https://huggingface.co/datasets/commonsense_qa).
+However, note that for test set the answers are not provided, so we are not using test set in our experiments. There are 9741 samples in training set and 1221 samples in validation set.
 
+### Task Introduction
+For task prompt, we are using prompt templates from [promptsource](https://github.com/bigscience-workshop/promptsource).
+The task of commonsense_qa is a multiple-choice question answering challenge requiring rich world knowledges. 
+Here is an example:
+```python
+{
+    'id': '075e483d21c29a511267ef62bedc0461',
+    'question': 'The sanctions against the school were a punishing blow, and they seemed to what the efforts the school had made to change?',
+    'question_concept': 'punishing',
+    'choices': {'label': ['A', 'B', 'C', 'D', 'E'],
+    'text': ['ignore', 'enforce', 'authoritarian', 'yell at', 'avoid']},
+    'answerKey': 'A'
+}
+```
 
 ## How to Train and Eval
 ### Dependency
