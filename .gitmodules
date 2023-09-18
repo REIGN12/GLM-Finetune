@@ -1,0 +1,3 @@
+[submodule "ReignAmltConfig"]
+	path = ReignAmltConfig
+	url = https://github.com/REIGN12/ReignAmltConfig.git
